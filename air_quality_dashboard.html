@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirSense — Air Quality Prediction & Health Advisory</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #050c1a; --panel: #0a1628; --card: #0f1f35;
+    --border: #1a2f4a; --border2: #243b55;
+    --text: #e0eaf5; --muted: #5a7a99; --dim: #8aa8c4;
+    --accent: #00d4ff; --accent2: #0090c4;
+    --good:    #00e400; --moderate: #d4c800; --usg: #ff7e00;
+    --unhealthy: #ff3030; --vunhealthy: #b040c0; --hazardous: #880015;
+    --glow: 0 0 20px rgba(0,212,255,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Exo 2', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BG Grid ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .container { max-width: 1160px; margin: 0 auto; padding: 0 20px; position: relative; z-index:1; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: var(--glow);
+  }
+  .logo h1 { font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+  .logo p  { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .header-badge {
+    background: rgba(0,212,255,0.08); border: 1px solid var(--border2);
+    padding: 6px 14px; border-radius: 20px; font-size: 11px;
+    color: var(--accent); font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 2px; color: var(--muted);
+    margin: 28px 0 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── INPUT GRID ── */
+  .inputs-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  @media (max-width: 680px) { .inputs-grid { grid-template-columns: 1fr 1fr; } }
+
+  .input-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .input-card:focus-within {
+    border-color: var(--accent2);
+    box-shadow: 0 0 14px rgba(0,212,255,0.12);
+  }
+  .input-card label {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; display: block; margin-bottom: 6px;
+  }
+  .input-card .unit { font-size: 9px; color: var(--dim); }
+  .input-card input {
+    width: 100%; background: transparent; border: none; outline: none;
+    font-family: 'Share Tech Mono', monospace; font-size: 22px;
+    color: var(--text); -moz-appearance: textfield;
+  }
+  .input-card input::-webkit-outer-spin-button,
+  .input-card input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  /* ── RANGE HINT ── */
+  .range-hint {
+    font-size: 9px; color: var(--muted); margin-top: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* ── ACTION ROW ── */
+  .action-row { display: flex; gap: 12px; margin-top: 18px; align-items: center; }
+
+  .btn-primary {
+    flex: 1; padding: 14px 28px; border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000; transition: opacity .15s, transform .1s;
+  }
+  .btn-primary:hover { opacity: .9; }
+  .btn-primary:active { transform: scale(.98); }
+
+  .btn-secondary {
+    padding: 14px 20px; border: 1px solid var(--border2); border-radius: 10px;
+    background: transparent; color: var(--dim); cursor: pointer;
+    font-size: 13px; letter-spacing: 1px; transition: border-color .2s, color .2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent); }
+
+  /* ── RESULT CARD ── */
+  #result { display: none; animation: fadeIn .4s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform:none; } }
+
+  .aqi-main {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 640px) { .aqi-main { grid-template-columns: 1fr; } }
+
+  .aqi-display {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 24px; display: flex; flex-direction: column; align-items: center;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .aqi-glow {
+    position: absolute; inset: 0; border-radius: 14px; opacity: 0.07;
+    pointer-events: none;
+  }
+  .aqi-number {
+    font-family: 'Rajdhani', sans-serif; font-size: 80px; font-weight: 700;
+    line-height: 1; margin: 8px 0 4px;
+  }
+  .aqi-label {
+    font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .aqi-dominant {
+    margin-top: 10px; font-size: 11px; color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(255,255,255,0.04); padding: 4px 12px; border-radius: 20px;
+  }
+
+  .aqi-scale-bar {
+    width: 100%; height: 10px; border-radius: 5px; margin: 12px 0 4px;
+    background: linear-gradient(90deg, #00e400 0%, #ffff00 16%, #ff7e00 32%, #ff3030 50%, #b040c0 66%, #880015 100%);
+    position: relative;
+  }
+  .aqi-needle {
+    position: absolute; top: -4px; width: 3px; height: 18px;
+    background: white; border-radius: 2px; transform: translateX(-50%);
+    box-shadow: 0 0 6px rgba(255,255,255,0.8);
+    transition: left .5s ease;
+  }
+  .scale-labels {
+    display: flex; justify-content: space-between;
+    font-size: 8px; color: var(--muted); font-family: 'Share Tech Mono', monospace;
+  }
+
+  .sub-indices {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+  }
+  .sub-row {
+    display: flex; align-items: center; gap: 10px; padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .sub-row:last-child { border-bottom: none; }
+  .sub-name { font-size: 12px; color: var(--dim); width: 50px; font-family: 'Share Tech Mono', monospace; }
+  .sub-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+  .sub-bar { height: 100%; border-radius: 3px; transition: width .6s ease; }
+  .sub-val { font-family: 'Share Tech Mono', monospace; font-size: 12px; width: 32px; text-align: right; }
+  .sub-dom { font-size: 9px; color: var(--accent); margin-left: 4px; }
+
+  /* ── ADVISORY CARD ── */
+  .advisory-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 24px; margin-top: 14px;
+  }
+  .advisory-header {
+    font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700;
+    letter-spacing: 1px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .advisory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .advisory-grid { grid-template-columns: 1fr; } }
+
+  .adv-item {
+    background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px 14px;
+  }
+  .adv-item-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 5px; }
+  .adv-item-value { font-size: 13px; color: var(--text); line-height: 1.4; }
+
+  /* ── TIPS ── */
+  .tips-list { margin-top: 14px; }
+  .tip-item {
+    display: flex; gap: 10px; padding: 8px 0;
+    font-size: 13px; color: var(--dim); border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+  }
+  .tip-item:last-child { border-bottom: none; }
+  .tip-dot { color: var(--accent); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── SCENARIO BUTTONS ── */
+  .scenario-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .scenario-btn {
+    padding: 7px 14px; border: 1px solid var(--border2); border-radius: 8px;
+    background: var(--card); color: var(--dim); cursor: pointer; font-size: 11px;
+    letter-spacing: .5px; transition: all .15s;
+  }
+  .scenario-btn:hover { border-color: var(--accent2); color: var(--accent); background: rgba(0,212,255,0.06); }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 50px; padding: 20px 0;
+    border-top: 1px solid var(--border);
+    font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🌬</div>
+      <div>
+        <h1>AIRSENSE</h1>
+        <p>Air Quality Prediction & Health Advisory System</p>
+      </div>
+    </div>
+    <div class="header-badge">ML MODEL: RANDOM FOREST · R²=0.8427</div>
+  </header>
+
+  <!-- SCENARIOS -->
+  <div class="section-title">Quick Scenarios</div>
+  <div class="scenario-row">
+    <button class="scenario-btn" onclick="loadScenario('good')">🟢 Clean Mountain Air</button>
+    <button class="scenario-btn" onclick="loadScenario('moderate')">🟡 Suburban Morning</button>
+    <button class="scenario-btn" onclick="loadScenario('usg')">🟠 Urban Rush Hour</button>
+    <button class="scenario-btn" onclick="loadScenario('unhealthy')">🔴 Industrial Zone</button>
+    <button class="scenario-btn" onclick="loadScenario('vunhealthy')">🟣 Heavy Smog</button>
+    <button class="scenario-btn" onclick="loadScenario('hazardous')">⚫ Wildfire Smoke</button>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="section-title">Pollutant Readings</div>
+  <div class="inputs-grid">
+    <div class="input-card">
+      <label>PM2.5 <span class="unit">μg/m³</span></label>
+      <input type="number" id="pm25" value="38" min="0" max="500" step="0.1">
+      <div class="range-hint">Good: &lt;12 · Haz: &gt;250</div>
+    </div>
+    <div class="input-card">
+      <label>PM10 <span class="unit">μg/m³</span></label>
+      <input type="number" id="pm10" value="65" min="0" max="600" step="0.1">
+      <div class="range-hint">Good: &lt;54 · Haz: &gt;505</div>
+    </div>
+    <div class="input-card">
+      <label>CO <span class="unit">ppm</span></label>
+      <input type="number" id="co" value="2.1" min="0" max="50" step="0.1">
+      <div class="range-hint">Good: &lt;4.4 · Haz: &gt;40</div>
+    </div>
+    <div class="input-card">
+      <label>NO2 <span class="unit">ppb</span></label>
+      <input type="number" id="no2" value="85" min="0" max="2000" step="1">
+      <div class="range-hint">Good: &lt;53 · Haz: &gt;1650</div>
+    </div>
+    <div class="input-card">
+      <label>SO2 <span class="unit">ppb</span></label>
+      <input type="number" id="so2" value="22" min="0" max="1000" step="0.1">
+      <div class="range-hint">Good: &lt;35 · Haz: &gt;805</div>
+    </div>
+    <div class="input-card">
+      <label>O3 <span class="unit">ppb</span></label>
+      <input type="number" id="o3" value="55" min="0" max="400" step="0.1">
+      <div class="range-hint">Good: &lt;54 · Haz: &gt;301</div>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn-primary" onclick="analyze()">ANALYZE AIR QUALITY</button>
+    <button class="btn-secondary" onclick="resetInputs()">Reset</button>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result">
+    <div class="section-title">AQI Analysis</div>
+    <div class="aqi-main">
+      <!-- AQI Display -->
+      <div class="aqi-display" id="aqiDisplay">
+        <div class="aqi-glow" id="aqiGlow"></div>
+        <div style="font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Air Quality Index</div>
+        <div class="aqi-number" id="aqiNumber">—</div>
+        <div class="aqi-label" id="aqiLabel">—</div>
+        <div class="aqi-dominant" id="aqiDominant">Dominant: —</div>
+        <div style="width:100%;margin-top:18px;">
+          <div class="aqi-scale-bar">
+            <div class="aqi-needle" id="aqiNeedle" style="left:0%"></div>
+          </div>
+          <div class="scale-labels">
+            <span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>300</span><span>500</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-indices -->
+      <div class="sub-indices">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;margin-bottom:12px;color:var(--dim);">POLLUTANT SUB-INDICES</div>
+        <div id="subIndices"></div>
+      </div>
+    </div>
+
+    <!-- Advisory -->
+    <div class="advisory-card" id="advisoryCard">
+      <div class="advisory-header" id="advisoryHeader">Health Advisory</div>
+      <div id="advisorySummary" style="font-size:13px;color:var(--dim);margin-bottom:14px;line-height:1.5;"></div>
+      <div class="advisory-grid" id="advisoryGrid"></div>
+      <div class="tips-list" id="tipsList"></div>
+    </div>
+  </div>
+
+  <footer>AIRSENSE · AQI computed using US EPA standard breakpoints · ML model: Random Forest · R²=0.8427 · MAE=13.94</footer>
+</div>
+
+<script>
+// ── AQI Breakpoints ──────────────────────────────────────────────────────────
+const BP = {
+  pm25: [[0,12,0,50],[12.1,35.4,51,100],[35.5,55.4,101,150],[55.5,150.4,151,200],[150.5,250.4,201,300],[250.5,350.4,301,400],[350.5,500.4,401,500]],
+  pm10: [[0,54,0,50],[55,154,51,100],[155,254,101,150],[255,354,151,200],[355,424,201,300],[425,504,301,400],[505,604,401,500]],
+  co:   [[0,4.4,0,50],[4.5,9.4,51,100],[9.5,12.4,101,150],[12.5,15.4,151,200],[15.5,30.4,201,300],[30.5,40.4,301,400],[40.5,50.4,401,500]],
+  no2:  [[0,53,0,50],[54,100,51,100],[101,360,101,150],[361,649,151,200],[650,1249,201,300],[1250,1649,301,400],[1650,2049,401,500]],
+  so2:  [[0,35,0,50],[36,75,51,100],[76,185,101,150],[186,304,151,200],[305,604,201,300],[605,804,301,400],[805,1004,401,500]],
+  o3:   [[0,54,0,50],[55,70,51,100],[71,85,101,150],[86,105,151,200],[106,200,201,300],[201,300,301,400],[301,400,401,500]],
+};
+
+function subAQI(C, bps) {
+  for (const [Clo,Chi,Ilo,Ihi] of bps) {
+    if (C >= Clo && C <= Chi) return Math.round(((Ihi-Ilo)/(Chi-Clo))*(C-Clo)+Ilo);
+  }
+  return 500;
+}
+
+function getCategory(aqi) {
+  if (aqi <= 50)  return {name:"Good",              color:"#00e400", emoji:"🟢", cssVar:"--good"};
+  if (aqi <= 100) return {name:"Moderate",           color:"#d4c800", emoji:"🟡", cssVar:"--moderate"};
+  if (aqi <= 150) return {name:"Unhealthy for Sensitive Groups", color:"#ff7e00", emoji:"🟠", cssVar:"--usg"};
+  if (aqi <= 200) return {name:"Unhealthy",          color:"#ff3030", emoji:"🔴", cssVar:"--unhealthy"};
+  if (aqi <= 300) return {name:"Very Unhealthy",     color:"#b040c0", emoji:"🟣", cssVar:"--vunhealthy"};
+  return             {name:"Hazardous",               color:"#880015", emoji:"⚫", cssVar:"--hazardous"};
+}
+
+const ADVISORIES = {
+  "Good": {
+    summary: "Air quality is satisfactory with little or no risk to the general population.",
+    items: [
+      {label:"General Public",    val:"Enjoy outdoor activities freely."},
+      {label:"Sensitive Groups",  val:"No restrictions needed."},
+      {label:"Outdoor Activity",  val:"All activities recommended."},
+      {label:"Mask Advice",       val:"No mask required."},
+      {label:"Windows/Indoors",   val:"Open windows for fresh air."},
+    ],
+    tips: ["Great day for outdoor exercise.","Ideal conditions for all age groups.","Air quality poses no health concern."]
+  },
+  "Moderate": {
+    summary: "Air quality is acceptable; some pollutants may concern very sensitive individuals.",
+    items: [
+      {label:"General Public",    val:"Unusually sensitive people should limit prolonged outdoor exertion."},
+      {label:"Sensitive Groups",  val:"Monitor symptoms if you have respiratory conditions."},
+      {label:"Outdoor Activity",  val:"Light to moderate activities are fine."},
+      {label:"Mask Advice",       val:"Mask optional for sensitive individuals."},
+      {label:"Windows/Indoors",   val:"Open windows with caution."},
+    ],
+    tips: ["Limit strenuous outdoor activity if sensitive.","Keep asthma inhalers handy.","Check air quality before exercising outdoors."]
+  },
+  "Unhealthy for Sensitive Groups": {
+    summary: "Sensitive groups may experience health effects; general public is less likely to be affected.",
+    items: [
+      {label:"General Public",    val:"Consider reducing prolonged outdoor exertion."},
+      {label:"Sensitive Groups",  val:"Children, elderly, and those with heart/lung disease should reduce outdoor time."},
+      {label:"Outdoor Activity",  val:"Short walks okay; avoid strenuous exercise."},
+      {label:"Mask Advice",       val:"N95/KN95 recommended for sensitive groups outdoors."},
+      {label:"Windows/Indoors",   val:"Keep windows closed if sensitive. Use air purifier."},
+    ],
+    tips: ["Reschedule outdoor sports to early morning or evening.","Use air purifiers indoors.","Keep medications accessible.","Avoid areas with heavy traffic."]
+  },
+  "Unhealthy": {
+    summary: "Everyone may begin to experience health effects; sensitive groups face more serious effects.",
+    items: [
+      {label:"General Public",    val:"Avoid prolonged or heavy outdoor exertion."},
+      {label:"Sensitive Groups",  val:"Remain indoors and keep activity levels low."},
+      {label:"Outdoor Activity",  val:"Exercise indoors instead."},
+      {label:"Mask Advice",       val:"Wear N95/KN95 mask outdoors."},
+      {label:"Windows/Indoors",   val:"Keep windows closed; run air purifier."},
+    ],
+    tips: ["Limit time spent outside.","Run air purifiers on high.","Wear a well-fitting N95 or KN95 mask if going out.","Watch for coughing or shortness of breath.","Stay hydrated and remain indoors as much as possible."]
+  },
+  "Very Unhealthy": {
+    summary: "Health alert: everyone may experience serious health effects.",
+    items: [
+      {label:"General Public",    val:"Avoid all outdoor exertion."},
+      {label:"Sensitive Groups",  val:"Stay indoors; seek medical attention if experiencing symptoms."},
+      {label:"Outdoor Activity",  val:"Stay indoors entirely if possible."},
+      {label:"Mask Advice",       val:"Full respirator or N95 mandatory if outdoors."},
+      {label:"Windows/Indoors",   val:"Seal windows and doors; run HEPA purifier continuously."},
+    ],
+    tips: ["Stay indoors with windows and doors closed.","Use a HEPA air purifier.","Seek medical attention for vulnerable groups.","Avoid exercise even indoors if ventilation is poor.","Emergency contacts should be on standby for at-risk individuals."]
+  },
+  "Hazardous": {
+    summary: "EMERGENCY: Serious health risk for the entire population.",
+    items: [
+      {label:"General Public",    val:"Avoid ALL outdoor activity. Stay indoors immediately."},
+      {label:"Sensitive Groups",  val:"Evacuate to clean air if possible; seek immediate medical care for symptoms."},
+      {label:"Outdoor Activity",  val:"Do NOT go outside under any circumstances."},
+      {label:"Mask Advice",       val:"P100 respirator required if evacuation is necessary."},
+      {label:"Windows/Indoors",   val:"Seal all openings. Run multiple HEPA purifiers."},
+    ],
+    tips: ["EMERGENCY — Do not go outside.","Seal all windows, doors, and vents.","Contact emergency services if experiencing difficulty breathing.","Vulnerable individuals may need emergency evacuation.","Follow civil authority instructions immediately."]
+  }
+};
+
+// ── Scenarios ─────────────────────────────────────────────────────────────────
+const SCENARIOS = {
+  good:      {pm25:5,   pm10:12,  co:0.3, no2:10,  so2:3,  o3:30},
+  moderate:  {pm25:18,  pm10:42,  co:1.0, no2:45,  so2:12, o3:62},
+  usg:       {pm25:38,  pm10:65,  co:2.1, no2:85,  so2:22, o3:55},
+  unhealthy: {pm25:75,  pm10:140, co:6.0, no2:180, so2:90, o3:80},
+  vunhealthy:{pm25:180, pm10:290, co:12,  no2:420, so2:200,o3:130},
+  hazardous: {pm25:280, pm10:380, co:15,  no2:60,  so2:20, o3:95},
+};
+
+function loadScenario(name) {
+  const s = SCENARIOS[name];
+  document.getElementById('pm25').value = s.pm25;
+  document.getElementById('pm10').value = s.pm10;
+  document.getElementById('co').value   = s.co;
+  document.getElementById('no2').value  = s.no2;
+  document.getElementById('so2').value  = s.so2;
+  document.getElementById('o3').value   = s.o3;
+  analyze();
+}
+
+function resetInputs() {
+  loadScenario('usg');
+  document.getElementById('result').style.display = 'none';
+}
+
+// ── Analyze ───────────────────────────────────────────────────────────────────
+function analyze() {
+  const pm25 = +document.getElementById('pm25').value;
+  const pm10 = +document.getElementById('pm10').value;
+  const co   = +document.getElementById('co').value;
+  const no2  = +document.getElementById('no2').value;
+  const so2  = +document.getElementById('so2').value;
+  const o3   = +document.getElementById('o3').value;
+
+  const subs = {
+    'PM2.5': subAQI(pm25, BP.pm25),
+    'PM10':  subAQI(pm10, BP.pm10),
+    'CO':    subAQI(co,   BP.co),
+    'NO2':   subAQI(no2,  BP.no2),
+    'SO2':   subAQI(so2,  BP.so2),
+    'O3':    subAQI(o3,   BP.o3),
+  };
+
+  const aqi = Math.max(...Object.values(subs));
+  const dominant = Object.keys(subs).find(k => subs[k] === aqi);
+  const cat = getCategory(aqi);
+  const adv = ADVISORIES[cat.name];
+
+  // Update AQI display
+  document.getElementById('aqiNumber').textContent = aqi;
+  document.getElementById('aqiNumber').style.color = cat.color;
+  document.getElementById('aqiLabel').textContent  = cat.emoji + ' ' + cat.name;
+  document.getElementById('aqiLabel').style.color  = cat.color;
+  document.getElementById('aqiDominant').textContent = `Dominant Pollutant: ${dominant}`;
+  document.getElementById('aqiGlow').style.background = `radial-gradient(circle, ${cat.color} 0%, transparent 70%)`;
+
+  // Needle position (log-ish scale: 0→500 → 0→100%)
+  const pct = Math.min((aqi / 500) * 100, 99);
+  document.getElementById('aqiNeedle').style.left = pct + '%';
+
+  // Sub-indices
+  const maxSub = Math.max(...Object.values(subs));
+  let subHtml = '';
+  for (const [poll, idx] of Object.entries(subs)) {
+    const barColor = getCategory(idx).color;
+    const barW = Math.round((idx / 500) * 100);
+    const isDom = poll === dominant ? '<span class="sub-dom">▲ DOMINANT</span>' : '';
+    subHtml += `
+      <div class="sub-row">
+        <div class="sub-name">${poll}</div>
+        <div class="sub-bar-wrap">
+          <div class="sub-bar" style="width:${barW}%;background:${barColor};"></div>
+        </div>
+        <div class="sub-val" style="color:${barColor}">${idx}</div>
+        ${isDom}
+      </div>`;
+  }
+  document.getElementById('subIndices').innerHTML = subHtml;
+
+  // Advisory header
+  document.getElementById('advisoryHeader').textContent = cat.emoji + ' Health Advisory — ' + cat.name;
+  document.getElementById('advisoryHeader').style.color = cat.color;
+  document.getElementById('advisoryCard').style.borderColor = cat.color + '44';
+
+  // Advisory summary
+  document.getElementById('advisorySummary').textContent = adv.summary;
+
+  // Advisory grid
+  let gridHtml = '';
+  for (const item of adv.items) {
+    gridHtml += `<div class="adv-item"><div class="adv-item-label">${item.label}</div><div class="adv-item-value">${item.val}</div></div>`;
+  }
+  document.getElementById('advisoryGrid').innerHTML = gridHtml;
+
+  // Tips
+  let tipsHtml = '<div style="font-family:\'Rajdhani\',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;">Action Tips</div>';
+  for (const tip of adv.tips) {
+    tipsHtml += `<div class="tip-item"><span class="tip-dot">›</span><span>${tip}</span></div>`;
+  }
+  document.getElementById('tipsList').innerHTML = tipsHtml;
+
+  // Show result
+  const resultEl = document.getElementById('result');
+  resultEl.style.display = 'block';
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Run on load
+analyze();
+</script>
+</body>
+</html>
